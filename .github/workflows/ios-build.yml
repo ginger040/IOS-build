@@ -24,10 +24,11 @@ jobs:
         run: |
           toolchain build python3
           toolchain build kivy
-          toolchain create "$APP_NAME" "$PROJ_DIR"
+          toolchain create "$APP_NAME" "$PROJ_DIR/main.py"
           toolchain build "$APP_NAME"
           echo "== Project contents =="
           ls -la "$PROJ_DIR/${APP_NAME}-ios"
+
 
       - name: Build Xcode archive (unsigned)
         run: |
