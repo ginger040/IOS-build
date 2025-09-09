@@ -5,53 +5,51 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-latest
     env:
-      APP_NAME: XandO
       PROJ_DIR: ${{ github.workspace }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           brew install autoconf automake libtool pkg-config
+          brew link libtool
           pip install Cython==3.0.11
           pip install kivy-ios
 
-      - name: Build project with kivy-ios
+      - name: Build kivy-ios frameworks
         run: |
           toolchain build python3
           toolchain build kivy
-          toolchain create XandO $PROJ_DIR/main.py
-          echo "== Created dirs =="
-          ls -la $PROJ_DIR
-          ls -la $PROJ_DIR/XandO-ios || true
-          toolchain build XandO
 
-
-
-      - name: Build Xcode archive (unsigned)
+      - name: Create Xcode project
         run: |
-          cd "$PROJ_DIR/${APP_NAME}-ios"
-          xcodebuild -scheme "$APP_NAME" \
-                     -configuration Release \
-                     -archivePath "$PROJ_DIR/build/$APP_NAME.xcarchive" \
-                     archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          toolchain create xando $PROJ_DIR/main.py
+          echo "Created project structure:"
+          ls -R $PROJ_DIR/xando-ios
 
-      - name: Export IPA
+      - name: Build Xcode project
         run: |
-          xcodebuild -exportArchive \
-            -archivePath "$PROJ_DIR/build/$APP_NAME.xcarchive" \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath "$PROJ_DIR/build" \
-            -allowProvisioningUpdates || echo "⚠️ Export failed (unsigned build, expected)"
-          ls -R "$PROJ_DIR/build"
+          cd $PROJ_DIR/xando-ios
+          xcodebuild \
+            -project xando.xcodeproj \
+            -scheme xando \
+            -configuration Release \
+            -derivedDataPath build
+
+      - name: Package IPA (no signing)
+        run: |
+          mkdir -p $PROJ_DIR/output
+          xcrun -sdk iphoneos PackageApplication \
+            -v $PROJ_DIR/xando-ios/build/Build/Products/Release-iphoneos/xando.app \
+            -o $PROJ_DIR/output/xando.ipa
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-ipa
-          path: build/*.ipa
+          name: "xando-ipa"
+          path: ${{ github.workspace }}/output/xando.ipa
           if-no-files-found: error
