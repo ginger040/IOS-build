@@ -5,32 +5,50 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-14
     env:
+      APP_NAME: XandO
       PROJ_DIR: ${{ github.workspace }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Build Xcode project.
+      - name: Install deps
         run: |
           brew install autoconf automake libtool pkg-config
-          brew link libtool
           pip install Cython==3.0.11
           pip install kivy-ios
-          toolchain build kivy
-          toolchain create "XandO" $PROJ_DIR
-          echo "Workspace is $PROJ_DIR"
-          ls -R $PROJ_DIR
-      - name: Build IPA
+
+      - name: Build project with kivy-ios
         run: |
-          
-        
-      - name: Upload Xcode Project artifact
+          toolchain build python3
+          toolchain build kivy
+          toolchain create "$APP_NAME" "$PROJ_DIR"
+          toolchain build "$APP_NAME"
+          echo "== Project contents =="
+          ls -la "$PROJ_DIR/${APP_NAME}-ios"
+
+      - name: Build Xcode archive (unsigned)
+        run: |
+          cd "$PROJ_DIR/${APP_NAME}-ios"
+          xcodebuild -scheme "$APP_NAME" \
+                     -configuration Release \
+                     -archivePath "$PROJ_DIR/build/$APP_NAME.xcarchive" \
+                     archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$PROJ_DIR/build/$APP_NAME.xcarchive" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$PROJ_DIR/build" \
+            -allowProvisioningUpdates || echo "⚠️ Export failed (unsigned build, expected)"
+          ls -R "$PROJ_DIR/build"
+
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xando-xcodeproj
-          path: ${{ env.PROJ_DIR }}/xando-ios
+          name: ${{ env.APP_NAME }}-ipa
+          path: build/*.ipa
           if-no-files-found: error
-
