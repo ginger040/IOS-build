@@ -39,8 +39,10 @@ jobs:
           xcodebuild \
             -project xando.xcodeproj \
             -scheme xando \
+            -sdk iphonesimulator \
             -configuration Release \
             -derivedDataPath build
+
 
 
 
