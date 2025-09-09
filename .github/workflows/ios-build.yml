@@ -38,9 +38,10 @@ jobs:
           xcodebuild -list
           xcodebuild \
             -project xando.xcodeproj \
-            -scheme YourApp \
+            -scheme xando \
             -configuration Release \
             -derivedDataPath build
+
 
 
       - name: Package IPA (no signing)
