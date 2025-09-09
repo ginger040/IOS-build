@@ -34,11 +34,14 @@ jobs:
       - name: Build Xcode project
         run: |
           cd $PROJ_DIR/xando-ios
+          echo "== Available schemes =="
+          xcodebuild -list
           xcodebuild \
             -project xando.xcodeproj \
-            -scheme xando \
+            -scheme YourApp \
             -configuration Release \
             -derivedDataPath build
+
 
       - name: Package IPA (no signing)
         run: |
